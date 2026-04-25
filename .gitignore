@@ -1,0 +1,28 @@
+# Dataset (terlalu besar untuk GitHub)
+data/
+
+# Model hasil training
+ml-api/model/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+.venv
+venv/
+*.egg-info/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Laravel (sudah ada di laravel-app/.gitignore tapi jaga-jaga)
+laravel-app/vendor/
+laravel-app/node_modules/
+laravel-app/.env
+laravel-app/public/build/
+laravel-app/storage/*.key
+
+# OS
+.DS_Store
+Thumbs.db
