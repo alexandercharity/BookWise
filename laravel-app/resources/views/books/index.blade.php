@@ -2,41 +2,62 @@
 @section('title', 'Daftar Buku')
 
 @section('content')
-<div class="mb-6">
-    <h1 class="text-2xl font-bold text-indigo-700">
-        {{ $query ? "Hasil pencarian: \"{$query}\"" : 'Semua Buku' }}
-    </h1>
-    <p class="text-gray-500 text-sm mt-1">{{ $books->total() }} buku ditemukan</p>
+
+{{-- Header --}}
+<div class="mb-8">
+    @if($query)
+        <p class="text-gray-400 text-sm mb-1">Hasil pencarian untuk</p>
+        <h1 class="text-3xl font-bold text-white">"{{ $query }}"</h1>
+        <p class="text-gray-500 text-sm mt-2">{{ $books->total() }} buku ditemukan</p>
+    @else
+        <h1 class="text-3xl font-bold text-white mb-1">Semua Buku</h1>
+        <p class="text-gray-500 text-sm">{{ number_format($books->total()) }} buku tersedia</p>
+    @endif
 </div>
 
 {{-- Mobile search --}}
-<form action="{{ route('books.index') }}" method="GET" class="flex gap-2 mb-6 md:hidden">
-    <input name="q" value="{{ $query }}" placeholder="Cari buku..."
-           class="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-    <button class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm">Cari</button>
+<form action="{{ route('books.index') }}" method="GET" class="flex gap-2 mb-8 md:hidden">
+    <div class="relative flex-1">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+        <input name="q" value="{{ $query }}" placeholder="Cari buku..."
+               class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    </div>
+    <button class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm transition">Cari</button>
 </form>
 
-<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+{{-- Grid --}}
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
     @forelse($books as $book)
         <a href="{{ route('books.show', $book) }}"
-           class="bg-white rounded-xl shadow hover:shadow-md transition overflow-hidden group">
-            <img src="{{ $book->image_url ?: 'https://via.placeholder.com/128x192?text=No+Cover' }}"
-                 alt="{{ $book->title }}"
-                 class="w-full h-44 object-cover group-hover:opacity-90 transition">
+           class="book-card group bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 hover:border-indigo-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-900/20 hover:-translate-y-1">
+            <div class="relative overflow-hidden aspect-[2/3]">
+                <img src="{{ $book->image_url ?: 'https://placehold.co/128x192/1e293b/6366f1?text=📚' }}"
+                     alt="{{ $book->title }}"
+                     class="w-full h-full object-cover">
+                <div class="book-overlay absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 transition-opacity duration-300 flex items-end p-3">
+                    <span class="text-xs text-white font-medium bg-indigo-600 px-2 py-1 rounded-lg">Lihat Detail</span>
+                </div>
+            </div>
             <div class="p-3">
-                <p class="text-sm font-semibold line-clamp-2 leading-tight">{{ $book->title }}</p>
+                <p class="text-sm font-semibold line-clamp-2 leading-tight text-gray-100 group-hover:text-indigo-300 transition">{{ $book->title }}</p>
                 <p class="text-xs text-gray-500 mt-1 truncate">{{ $book->author }}</p>
-                <p class="text-xs text-indigo-600 mt-1">⭐ {{ $book->avgRating() }}/10</p>
+                <div class="flex items-center gap-1 mt-2">
+                    <span class="text-yellow-400 text-xs">★</span>
+                    <span class="text-xs text-gray-400">{{ $book->avgRating() }}/10</span>
+                </div>
             </div>
         </a>
     @empty
-        <div class="col-span-full text-center text-gray-400 py-16">
-            Tidak ada buku ditemukan.
+        <div class="col-span-full text-center py-20">
+            <p class="text-5xl mb-4">📭</p>
+            <p class="text-gray-400">Tidak ada buku ditemukan.</p>
         </div>
     @endforelse
 </div>
 
-<div class="mt-8">
+{{-- Pagination --}}
+<div class="mt-10 flex justify-center">
     {{ $books->links() }}
 </div>
+
 @endsection
