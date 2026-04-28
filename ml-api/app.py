@@ -2,7 +2,6 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import joblib
-import numpy as np
 import pandas as pd
 import os
 
@@ -61,25 +60,12 @@ def recommend_collaborative(user_id: str = Query(...), top_k: int = Query(10)):
     if cf_model is None or books_df is None:
         raise HTTPException(503, "Model belum di-load.")
 
-    uid = int(user_id)
-    user2idx = cf_model["user2idx"]
+    all_book_ids = books_df["book_id"].unique()
+    predictions  = [(bid, cf_model.predict(str(user_id), str(bid)).est) for bid in all_book_ids]
+    predictions.sort(key=lambda x: x[1], reverse=True)
+    top_ids = [p[0] for p in predictions[:top_k]]
 
-    if uid not in user2idx:
-        # User baru: fallback ke buku dengan average_rating tertinggi
-        top = books_df.nlargest(top_k, "average_rating")
-        return {"method": "collaborative", "recommendations": _format(top)}
-
-    user_idx         = user2idx[uid]
-    item_user_matrix = cf_model["item_user_matrix"]
-    model            = cf_model["model"]
-    idx2book         = cf_model["idx2book"]
-
-    # user_items = baris user dari matrix (transposed)
-    user_items = item_user_matrix.T.tocsr()
-    ids, scores = model.recommend(user_idx, user_items[user_idx], N=top_k, filter_already_liked_items=True)
-
-    top_book_ids = [idx2book[i] for i in ids]
-    result = books_df[books_df["book_id"].isin(top_book_ids)]
+    result = books_df[books_df["book_id"].isin(top_ids)]
     return {"method": "collaborative", "recommendations": _format(result)}
 
 
@@ -98,6 +84,6 @@ def recommend_hybrid(user_id: str = Query(...), isbn: str = Query(None), book_id
 def search_books(q: str = Query(...), limit: int = Query(20)):
     if books_df is None:
         raise HTTPException(503, "Model belum di-load.")
-    mask   = (books_df["title"].str.contains(q, case=False, na=False) |
-              books_df["authors"].str.contains(q, case=False, na=False))
+    mask = (books_df["title"].str.contains(q, case=False, na=False) |
+            books_df["authors"].str.contains(q, case=False, na=False))
     return {"results": _format(books_df[mask].head(limit))}

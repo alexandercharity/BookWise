@@ -1,5 +1,5 @@
 """
-train.py — Melatih model Content-Based dan Collaborative Filtering (ALS)
+train.py — Melatih model Content-Based dan Collaborative Filtering (SVD)
 Jalankan sekali: python ml-api/train.py
 Dataset: GoodBooks-10k (letakkan di ./data/)
   - books.csv
@@ -11,8 +11,8 @@ import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import implicit
-from scipy.sparse import csr_matrix
+from surprise import SVD, Dataset, Reader
+from surprise.model_selection import GridSearchCV
 import joblib
 import os
 
@@ -31,13 +31,12 @@ books = books[["book_id", "isbn", "authors", "title",
                "original_publication_year", "image_url", "average_rating"]].copy()
 books.dropna(subset=["book_id", "title"], inplace=True)
 books.drop_duplicates(subset="book_id", inplace=True)
-books["isbn"] = books["isbn"].fillna(books["book_id"].astype(str))
+books["isbn"]    = books["isbn"].fillna(books["book_id"].astype(str))
 books["book_id"] = books["book_id"].astype(int)
 
 ratings = ratings[["user_id", "book_id", "rating"]].dropna()
 ratings = ratings[ratings["rating"].between(1, 5)]
 
-# Filter user & buku yang cukup aktif
 user_counts = ratings["user_id"].value_counts()
 book_counts = ratings["book_id"].value_counts()
 ratings = ratings[ratings["user_id"].isin(user_counts[user_counts >= 3].index)]
@@ -64,41 +63,31 @@ cb_model = {
 joblib.dump(cb_model, f"{MODEL_DIR}/content_based.pkl")
 print("✅ Content-Based model saved.")
 
-# ── 3. Collaborative Filtering (ALS via implicit) ─────────────────────────
-print("\nTraining Collaborative Filtering (ALS)...")
+# ── 3. Collaborative Filtering (SVD) ──────────────────────────────────────
+print("\nTraining Collaborative Filtering (SVD)...")
+reader = Reader(rating_scale=(1, 5))
+data   = Dataset.load_from_df(ratings[["user_id", "book_id", "rating"]], reader)
 
-# Buat mapping user & book ke index integer
-unique_users = ratings["user_id"].unique()
-unique_books = ratings["book_id"].unique()
-user2idx = {u: i for i, u in enumerate(unique_users)}
-book2idx = {b: i for i, b in enumerate(unique_books)}
-idx2user = {i: u for u, i in user2idx.items()}
-idx2book = {i: b for b, i in book2idx.items()}
-
-rows = ratings["book_id"].map(book2idx).values
-cols = ratings["user_id"].map(user2idx).values
-data = ratings["rating"].values.astype(np.float32)
-
-# item-user matrix (implicit expects items x users)
-item_user_matrix = csr_matrix((data, (rows, cols)),
-                               shape=(len(unique_books), len(unique_users)))
-
-model = implicit.als.AlternatingLeastSquares(factors=50, iterations=20, regularization=0.1)
-model.fit(item_user_matrix)
-
-cf_model = {
-    "model":            model,
-    "user2idx":         user2idx,
-    "book2idx":         book2idx,
-    "idx2book":         idx2book,
-    "item_user_matrix": item_user_matrix,
-    "unique_books":     unique_books,
+param_grid = {
+    "n_epochs": [20, 30],
+    "lr_all":   [0.005, 0.01],
+    "reg_all":  [0.02, 0.1],
 }
+print("Running GridSearchCV (beberapa menit)...")
+gs = GridSearchCV(SVD, param_grid, measures=["rmse"], cv=3, n_jobs=-1)
+gs.fit(data)
+
+best_params = gs.best_params["rmse"]
+print(f"Best params: {best_params}")
+print(f"Best RMSE (CV): {gs.best_score['rmse']:.4f}")
+
+trainset = data.build_full_trainset()
+cf_model = SVD(**best_params)
+cf_model.fit(trainset)
 joblib.dump(cf_model, f"{MODEL_DIR}/collaborative.pkl")
-print("✅ Collaborative model saved.")
+print("✅ Collaborative (SVD) model saved.")
 
 # ── 4. Simpan books dataframe ──────────────────────────────────────────────
 books.to_pickle(f"{MODEL_DIR}/books.pkl")
 print("✅ Books dataframe saved.")
-
-print("\nTraining selesai. Jalankan: uvicorn ml-api/app:app --reload")
+print("\nTraining selesai. Jalankan: uvicorn ml-api.app:app --reload")
