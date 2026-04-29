@@ -4,24 +4,58 @@
 @section('content')
 
 {{-- Header --}}
-<div class="mb-8 flex items-center justify-between flex-wrap gap-4">
+<div class="mb-6 flex items-center justify-between flex-wrap gap-4">
     <div>
         @if($query)
             <p class="text-gray-400 text-sm mb-1">Hasil pencarian untuk</p>
             <h1 class="text-2xl font-bold text-white">"{{ $query }}"</h1>
+            <p class="text-gray-500 text-sm mt-1">{{ number_format($books->total()) }} buku ditemukan</p>
+        @elseif($genre)
+            <p class="text-gray-400 text-sm mb-1">Genre</p>
+            <h1 class="text-2xl font-bold text-white capitalize">{{ $genre }}</h1>
             <p class="text-gray-500 text-sm mt-1">{{ number_format($books->total()) }} buku ditemukan</p>
         @else
             <h1 class="text-2xl font-bold text-white mb-1">Semua Buku</h1>
             <p class="text-gray-500 text-sm">{{ number_format($books->total()) }} buku tersedia</p>
         @endif
     </div>
-    @if($query)
+    @if($query || $genre)
         <a href="{{ route('books.index') }}" class="text-sm text-indigo-400 hover:text-indigo-300 transition">← Semua Buku</a>
     @endif
 </div>
 
+{{-- Genre Filter Chips --}}
+@php
+$genres = [
+    '😱 Horror'     => 'horror',
+    '💕 Romance'    => 'romance',
+    '🔮 Fantasy'    => 'fantasy',
+    '🚀 Sci-Fi'     => 'science',
+    '🔍 Mystery'    => 'mystery',
+    '🕵️ Thriller'   => 'thriller',
+    '😂 Comedy'     => 'comedy',
+    '🌍 Adventure'  => 'adventure',
+    '📖 Historical' => 'historical',
+    '🧠 Non-Fiction'=> 'biography',
+    '💡 Philosophy' => 'philosophy',
+    '💼 Classic'    => 'classic',
+];
+@endphp
+<div class="flex flex-wrap gap-2 mb-6">
+    @foreach($genres as $label => $value)
+        <a href="{{ route('books.index', ['genre' => $genre === $value ? null : $value]) }}"
+           class="px-3 py-1.5 rounded-full text-sm font-medium transition border
+                  {{ $genre === $value
+                      ? 'bg-indigo-600 border-indigo-500 text-white'
+                      : 'bg-slate-800 border-slate-700 text-gray-300 hover:border-indigo-500 hover:text-white' }}">
+            {{ $label }}
+        </a>
+    @endforeach
+</div>
+
 {{-- Mobile search --}}
 <form action="{{ route('books.index') }}" method="GET" class="flex gap-2 mb-6 md:hidden">
+    <input type="hidden" name="genre" value="{{ $genre }}">
     <div class="relative flex-1">
         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
         <input name="q" value="{{ $query }}" placeholder="Cari buku..."

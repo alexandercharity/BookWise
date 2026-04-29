@@ -14,14 +14,19 @@ class BookController extends Controller
     public function index(Request $request)
     {
         $query = $request->get('q');
-        $books = Book::when($query, fn($q) => $q->where('title', 'like', "%{$query}%")
-                                                 ->orWhere('author', 'like', "%{$query}%"))
-                     ->withCount('ratings')
-                     ->orderByDesc('ratings_count')
-                     ->paginate(20)
-                     ->withQueryString();
+        $genre = $request->get('genre');
 
-        return view('books.index', compact('books', 'query'));
+        $books = Book::query()
+            ->when($query, fn($q) => $q->where('title', 'like', "%{$query}%")
+                                       ->orWhere('author', 'like', "%{$query}%"))
+            ->when($genre, fn($q) => $q->where('title', 'like', "%{$genre}%")
+                                       ->orWhere('author', 'like', "%{$genre}%"))
+            ->withCount('ratings')
+            ->orderByDesc('ratings_count')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('books.index', compact('books', 'query', 'genre'));
     }
 
     public function show(Book $book)
