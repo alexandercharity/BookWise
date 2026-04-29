@@ -60,6 +60,18 @@ def recommend_collaborative(user_id: str = Query(...), top_k: int = Query(10)):
     if cf_model is None or books_df is None:
         raise HTTPException(503, "Model belum di-load.")
 
+    # Cek apakah user ada di training data
+    try:
+        cf_model.predict(user_id, str(books_df["book_id"].iloc[0]))
+        user_known = True
+    except Exception:
+        user_known = False
+
+    if not user_known:
+        # Fallback: top rated books by average_rating
+        top = books_df.nlargest(top_k, "average_rating")
+        return {"method": "collaborative", "recommendations": _format(top)}
+
     all_book_ids = books_df["book_id"].unique()
     predictions  = [(bid, cf_model.predict(str(user_id), str(bid)).est) for bid in all_book_ids]
     predictions.sort(key=lambda x: x[1], reverse=True)

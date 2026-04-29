@@ -14,21 +14,46 @@ class RecommendationController extends Controller
     {
         $userId = (string) auth()->id();
 
-        // Collaborative: berdasarkan histori rating user
+        // ── Collaborative Filtering ──────────────────────────────────────
         $cfData  = $this->ml->collaborative($userId, 10);
-        $cfIsbns = collect($cfData['recommendations'] ?? [])->pluck('isbn');
+        $cfRecs  = collect($cfData['recommendations'] ?? []);
 
-        $cfBooks       = Book::whereIn('isbn', $cfIsbns)->get()->keyBy('isbn');
-        $collaborative = $cfIsbns->map(fn($isbn) => $cfBooks->get($isbn))->filter();
+        if ($cfRecs->isNotEmpty()) {
+            $cfIsbns       = $cfRecs->pluck('isbn');
+            $cfBooks       = Book::whereIn('isbn', $cfIsbns)->get()->keyBy('isbn');
+            $collaborative = $cfIsbns->map(fn($isbn) => $cfBooks->get($isbn))->filter();
+        } else {
+            // Fallback: tampilkan buku dengan rating terbanyak
+            $collaborative = Book::withCount('ratings')
+                ->orderByDesc('ratings_count')
+                ->limit(10)
+                ->get();
+        }
 
-        // Content-based: dari buku terakhir yang dilihat user
+        // ── Content-Based Filtering ──────────────────────────────────────
         $lastBook     = auth()->user()->histories()->with('book')->latest()->first()?->book;
         $contentBased = collect();
+
         if ($lastBook) {
-            $cbData   = $this->ml->contentBased($lastBook->isbn, 6);
-            $cbIsbns  = collect($cbData['recommendations'] ?? [])->pluck('isbn');
-            $cbBooks  = Book::whereIn('isbn', $cbIsbns)->get()->keyBy('isbn');
+            // Coba pakai isbn dulu, fallback ke book_id
+            $cbData = $this->ml->contentBased($lastBook->isbn, 6);
+
+            // Kalau isbn tidak ketemu di model, coba book_id
+            if (empty($cbData['recommendations'])) {
+                $cbData = $this->ml->contentBasedById((int) $lastBook->id, 6);
+            }
+
+            $cbIsbns      = collect($cbData['recommendations'] ?? [])->pluck('isbn');
+            $cbBooks      = Book::whereIn('isbn', $cbIsbns)->get()->keyBy('isbn');
             $contentBased = $cbIsbns->map(fn($isbn) => $cbBooks->get($isbn))->filter();
+
+            // Fallback: cari buku serupa berdasarkan author yang sama
+            if ($contentBased->isEmpty()) {
+                $contentBased = Book::where('author', $lastBook->author)
+                    ->where('id', '!=', $lastBook->id)
+                    ->limit(6)
+                    ->get();
+            }
         }
 
         return view('recommendations.index', compact('collaborative', 'contentBased', 'lastBook'));
