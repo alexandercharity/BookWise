@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BookWise — @yield('title', 'Sistem Rekomendasi Buku')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @php use Illuminate\Support\Facades\Storage; @endphp
     <style>
         .book-card:hover .book-overlay { opacity: 1; }
         .book-card:hover img { transform: scale(1.05); }
@@ -38,6 +39,14 @@
             <a href="{{ route('books.index') }}" class="px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-800 transition">Buku</a>
             @auth
                 <a href="{{ route('dashboard') }}" class="px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-800 transition">Rekomendasi</a>
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-800 transition">
+                    @if(auth()->user()->avatar)
+                        <img src="{{ Storage::url(auth()->user()->avatar) }}" class="w-6 h-6 rounded-full object-cover">
+                    @else
+                        <span class="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-xs text-white font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                    @endif
+                    <span class="hidden sm:inline">{{ auth()->user()->name }}</span>
+                </a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="px-3 py-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 hover:text-red-300 transition text-sm">Logout</button>

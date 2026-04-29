@@ -15,7 +15,7 @@ class RecommendationController extends Controller
         $userId = (string) auth()->id();
 
         // ── Collaborative Filtering ──────────────────────────────────────
-        $cfData  = $this->ml->collaborative($userId, 10);
+        $cfData  = $this->ml->collaborative($userId, 5);
         $cfRecs  = collect($cfData['recommendations'] ?? []);
 
         if ($cfRecs->isNotEmpty()) {
@@ -26,7 +26,7 @@ class RecommendationController extends Controller
             // Fallback: tampilkan buku dengan rating terbanyak
             $collaborative = Book::withCount('ratings')
                 ->orderByDesc('ratings_count')
-                ->limit(10)
+                ->limit(5)
                 ->get();
         }
 

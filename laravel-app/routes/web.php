@@ -20,9 +20,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/books/{book}/rate', [RatingController::class, 'store'])->name('ratings.store');
     Route::delete('/books/{book}/rate', [RatingController::class, 'destroy'])->name('ratings.destroy');
 
-    // Profile (dari Breeze)
+    // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
