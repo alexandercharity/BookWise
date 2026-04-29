@@ -23,11 +23,28 @@ class RecommendationController extends Controller
             $cfBooks       = Book::whereIn('isbn', $cfIsbns)->get()->keyBy('isbn');
             $collaborative = $cfIsbns->map(fn($isbn) => $cfBooks->get($isbn))->filter();
         } else {
-            // Fallback: tampilkan buku dengan rating terbanyak
-            $collaborative = Book::withCount('ratings')
-                ->orderByDesc('ratings_count')
-                ->limit(5)
-                ->get();
+            // Fallback: filter berdasarkan genre favorit user, atau top rated
+            $genres = auth()->user()->favorite_genres ?? [];
+            $query  = Book::withCount('ratings')->orderByDesc('ratings_count');
+
+            if (!empty($genres)) {
+                $query->where(function($q) use ($genres) {
+                    foreach ($genres as $genre) {
+                        $q->orWhere('title', 'like', "%{$genre}%")
+                          ->orWhere('author', 'like', "%{$genre}%");
+                    }
+                });
+            }
+
+            $collaborative = $query->limit(5)->get();
+
+            // Kalau hasil filter kosong, fallback ke top rated
+            if ($collaborative->isEmpty()) {
+                $collaborative = Book::withCount('ratings')
+                    ->orderByDesc('ratings_count')
+                    ->limit(5)
+                    ->get();
+            }
         }
 
         // ── Content-Based Filtering ──────────────────────────────────────

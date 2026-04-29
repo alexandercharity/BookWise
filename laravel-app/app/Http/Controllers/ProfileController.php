@@ -23,12 +23,13 @@ class ProfileController extends Controller
         $request->validate([
             'name'   => ['required', 'string', 'max:255'],
             'email'  => ['required', 'email', 'max:255', 'unique:users,email,' . $request->user()->id],
-            'avatar' => ['nullable', 'image', 'max:2048'],
+            'avatar' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp', 'max:4096'],
         ]);
 
         $user = $request->user();
         $user->name  = $request->name;
         $user->email = $request->email;
+        $user->favorite_genres = $request->input('genres', []);
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;

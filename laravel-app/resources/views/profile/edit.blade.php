@@ -30,6 +30,15 @@
             ✅ Profil berhasil diperbarui.
         </div>
     @endif
+
+    {{-- Validation errors --}}
+    @if($errors->any())
+        <div class="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-xl text-sm mb-6">
+            @foreach($errors->all() as $error)
+                <p>❌ {{ $error }}</p>
+            @endforeach
+        </div>
+    @endif
     @if(session('status') === 'password-updated')
         <div class="bg-emerald-900/50 border border-emerald-700 text-emerald-300 px-4 py-3 rounded-xl text-sm mb-6">
             ✅ Password berhasil diperbarui.
@@ -48,9 +57,13 @@
                 <label class="block text-sm text-gray-400 mb-2">Foto Profil</label>
                 <div class="flex items-center gap-4">
                     @if($user->avatar)
-                        <img src="{{ Storage::url($user->avatar) }}" class="w-14 h-14 rounded-full object-cover border border-slate-700">
+                        <img id="avatar-preview" src="{{ Storage::url($user->avatar) }}" class="w-14 h-14 rounded-full object-cover border border-slate-700">
+                        <div id="avatar-placeholder" class="hidden w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white">
+                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                        </div>
                     @else
-                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white">
+                        <img id="avatar-preview" src="" class="hidden w-14 h-14 rounded-full object-cover border border-slate-700">
+                        <div id="avatar-placeholder" class="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white">
                             {{ strtoupper(substr($user->name, 0, 1)) }}
                         </div>
                     @endif
@@ -81,6 +94,42 @@
                 <input id="email" type="email" name="email" value="{{ old('email', $user->email) }}"
                        class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                 @error('email') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+            </div>
+
+            {{-- Genres --}}
+            <div>
+                <label class="block text-sm text-gray-400 mb-3">Genre Favorit <span class="text-gray-600">(pilih beberapa)</span></label>
+                @php
+                $genres = [
+                    '📚 Fiction'       => 'fiction',
+                    '🔮 Fantasy'       => 'fantasy',
+                    '🚀 Sci-Fi'        => 'sci-fi',
+                    '😱 Horror'        => 'horror',
+                    '💕 Romance'       => 'romance',
+                    '🔍 Mystery'       => 'mystery',
+                    '🕵️ Thriller'      => 'thriller',
+                    '📖 Historical'    => 'historical',
+                    '😂 Comedy'        => 'comedy',
+                    '🌱 Self-Help'     => 'self-help',
+                    '🧠 Non-Fiction'   => 'non-fiction',
+                    '👶 Children'      => 'children',
+                    '💼 Biography'     => 'biography',
+                    '🌍 Adventure'     => 'adventure',
+                    '💡 Philosophy'    => 'philosophy',
+                    '🎭 Drama'         => 'drama',
+                ];
+                $selected = $user->favorite_genres ?? [];
+                @endphp
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    @foreach($genres as $label => $value)
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="genres[]" value="{{ $value }}"
+                                   {{ in_array($value, $selected) ? 'checked' : '' }}
+                                   class="rounded border-slate-600 bg-slate-800 text-indigo-500 focus:ring-indigo-500">
+                            <span class="text-sm text-gray-300 group-hover:text-white transition">{{ $label }}</span>
+                        </label>
+                    @endforeach
+                </div>
             </div>
 
             <button type="submit"
@@ -172,9 +221,13 @@ function previewAvatar(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = e => {
-            document.querySelectorAll('img[src*="avatars"], .rounded-full').forEach(el => {
-                if (el.tagName === 'IMG') el.src = e.target.result;
-            });
+            const preview = document.getElementById('avatar-preview');
+            if (preview) {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+            }
+            const placeholder = document.getElementById('avatar-placeholder');
+            if (placeholder) placeholder.classList.add('hidden');
         };
         reader.readAsDataURL(input.files[0]);
     }
