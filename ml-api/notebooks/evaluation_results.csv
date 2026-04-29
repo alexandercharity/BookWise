@@ -1,4 +1,4 @@
 Metode,RMSE,MAE,Precision@10,Recall@10
-Content-Based,—,—,0.1255,0.0085
-Collaborative (ALS),2.9987,2.8294,—,—
-Hybrid,2.9987,2.8294,0.1255,0.0085
+Content-Based,—,—,0.1255,0.0628
+Collaborative (SVD),0.8273,0.6444,—,—
+Hybrid,0.8273,0.6444,0.1255,0.0628
